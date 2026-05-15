@@ -43,11 +43,11 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
     const nuevoSaldo = nuevoTotal - (orden.seña || 0);
     const { error } = await supabase
       .from('ordenes')
-      .update({ presupuesto_total: nuevoTotal, saldo: nuevoSaldo })
+      .update({ presupuestoTotal: nuevoTotal, saldo: nuevoSaldo })
       .eq('id', orden.id);
 
     if (!error) {
-      setOrdenes(ordenes.map(o => o.id === orden.id ? { ...o, presupuesto_total: nuevoTotal, saldo: nuevoSaldo } : o));
+      setOrdenes(ordenes.map(o => o.id === orden.id ? { ...o, presupuestoTotal: nuevoTotal, saldo: nuevoSaldo } : o));
       setEditingId(null);
       setNuevoPrecio("");
     }
@@ -56,11 +56,16 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
   const borrarOrden = async (id: any) => {
     if (window.confirm("¿Seguro que querés eliminar esta orden? No se puede deshacer.")) {
       const { error } = await supabase.from('ordenes').delete().eq('id', id);
-      if (!error) setOrdenes(ordenes.filter(o => o.id !== id));
+      if (!error) {
+        setOrdenes(ordenes.filter(o => o.id !== id));
+      } else {
+        alert("Error al eliminar: " + error.message);
+      }
     }
   };
 
   const enviarWhatsappListo = (orden: any) => {
+    if (!orden.telefono) return;
     const telefono = orden.telefono.replace(/\D/g, ''); 
     const numeroFinal = telefono.startsWith('54') ? telefono : `549${telefono}`;
     const mensaje = `Hola *${orden.nombre}*, te informamos de *Servicio Tecnico* 📱 que tu equipo *${orden.equipo}* ya está listo. ¡Te esperamos!`;
@@ -68,8 +73,12 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
   };
 
   const actualizarEstado = async (id: any, nuevoEstado: string, ordenCompleta: any) => {
-    const fechaEntrega = nuevoEstado === 'Entregado' ? new Date().toLocaleString('es-AR') : null;
-    const { error } = await supabase.from('ordenes').update({ estado_orden: nuevoEstado, fecha_entrega: fechaEntrega }).eq('id', id);
+    const fechaEntrega = nuevoEstado === 'Entregado' ? new Date().toISOString() : null;
+    const { error } = await supabase
+      .from('ordenes')
+      .update({ estado_orden: nuevoEstado, fecha_entrega: fechaEntrega })
+      .eq('id', id);
+      
     if (!error) {
       setOrdenes(ordenes.map(o => o.id === id ? { ...o, estado_orden: nuevoEstado, fecha_entrega: fechaEntrega } : o));
       if (nuevoEstado === 'Listo' && ordenCompleta.telefono) enviarWhatsappListo(ordenCompleta);
@@ -108,8 +117,8 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
           <div>TEL: ${orden.telefono}</div>
           <div>EQUIPO: ${orden.equipo.toUpperCase()}</div>
           <div class="divider"></div>
-          <div style="display:flex; justify-content:space-between"><span>TOTAL:</span> <span>$${orden.presupuesto_total}</span></div>
-          <div style="display:flex; justify-content:space-between"><span>ABONADO:</span> <span>$${orden.saldo}</span></div>
+          <div style="display:flex; justify-content:space-between"><span>TOTAL:</span> <span>$${orden.presupuestoTotal}</span></div>
+          <div style="display:flex; justify-content:space-between"><span>ABONADO:</span> <span>$${orden.presupuestoTotal}</span></div>
           <div class="divider"></div>
           <div class="text-center">GARANTÍA HASTA: ${vencimiento.toLocaleDateString('es-AR')}</div>
           ${condicionesLegales}
@@ -142,7 +151,7 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
             <div style="font-size: 20px;">SISTEMA-GESTION</div>
             <div>Ciudad - Mendoza</div>
             <div>Contacto: 261 </div>
-            <div>Fecha: ${orden.fecha}</div>
+            <div>Fecha: ${new Date(orden.fecha).toLocaleDateString('es-AR')}</div>
           </div>
           <div class="divider"></div>
           <div class="text-center">${titulo}</div>
@@ -153,7 +162,7 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
           <div>EQUIPO: ${orden.equipo.toUpperCase()}</div>
           <div>FALLA: ${orden.falla.toUpperCase()}</div>
           <div class="divider"></div>
-          <div style="display:flex; justify-content:space-between"><span>TOTAL:</span> <span>$${orden.presupuesto_total}</span></div>
+          <div style="display:flex; justify-content:space-between"><span>TOTAL:</span> <span>$${orden.presupuestoTotal}</span></div>
           <div style="display:flex; justify-content:space-between"><span>SEÑA:</span> <span>$${orden.seña || 0}</span></div>
           <div style="display:flex; justify-content:space-between"><span>RESTANTE:</span> <span>$${orden.saldo}</span></div>
           ${esCopiaLocal ? '<br><br><div style="border-top:1px solid #000; text-align:center;">FIRMA CLIENTE</div>' : ''}
@@ -189,7 +198,7 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
                 </div>
                 <div style={{ color: '#3b82f6', fontWeight: '700', fontSize: '0.9rem' }}>📞 {orden.telefono}</div>
                 <div style={{ marginTop: '8px', fontSize: '0.95rem', color: theme.textMain }}>📱 <strong>{orden.equipo}</strong></div>
-                <div style={{ fontSize: '0.75rem', color: theme.textSub, marginTop: '4px' }}>INGRESÓ: {orden.fecha}</div>
+                <div style={{ fontSize: '0.75rem', color: theme.textSub, marginTop: '4px' }}>INGRESÓ: {new Date(orden.fecha).toLocaleDateString('es-AR')}</div>
                 
                 <button 
                   onClick={() => setExpandedId(expandedId === orden.id ? null : orden.id)}
@@ -219,7 +228,6 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
                       <button onClick={() => imprimirTicket(orden, true)} style={{ backgroundColor: darkMode ? '#334155' : '#e2e8f0', color: theme.textMain, border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', flex: 1 }}>📝 Copia</button>
                     </>
                   )}
-                  {/* BOTÓN DE BORRAR RECUPERADO */}
                   <button onClick={() => borrarOrden(orden.id)} style={{ backgroundColor: 'rgba(225, 29, 72, 0.1)', color: '#fb7185', border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', flex: 1 }}>🗑️</button>
                 </div>
               </div>
@@ -231,7 +239,7 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
                     color: orden.estado_orden === 'Entregado' ? '#3b82f6' : orden.estado_orden === 'Listo' ? '#16a34a' : '#d97706', 
                     padding: '6px 14px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '800', border: '1px solid'
                   }}>
-                    {orden.estado_orden ? orden.estado_orden.toUpperCase() : 'PENDIENTE'}
+                    {(orden.estado_orden || 'PENDIENTE').toUpperCase()}
                   </span>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button onClick={() => actualizarEstado(orden.id, 'Entregado', orden)} style={{ backgroundColor: '#2563eb', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '0.65rem', cursor: 'pointer', fontWeight: 'bold' }}>🤝 ENTREGAR</button>
@@ -245,7 +253,6 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
                     padding: '12px 15px', borderRadius: '15px', border: `1px solid ${theme.border}`, 
                     minWidth: '200px', textAlign: 'center'
                 }}>
-                  {/* EDICIÓN DE PRECIO RECUPERADA */}
                   {editingId === orden.id ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <input 
@@ -266,14 +273,14 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
                       <div style={{ color: '#f43f5e', fontWeight: '900', fontSize: '1.4rem', lineHeight: '1' }}>
                         $ {orden.saldo}
                         <button 
-                          onClick={() => { setEditingId(orden.id); setNuevoPrecio(orden.presupuesto_total); }}
+                          onClick={() => { setEditingId(orden.id); setNuevoPrecio(orden.presupuestoTotal); }}
                           style={{ marginLeft: '8px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', color: theme.textSub }}
                         >
                           ✏️
                         </button>
                       </div>
                       <div style={{ color: theme.textSub, fontSize: '0.6rem', fontWeight: 'bold', marginTop: '4px', textTransform: 'uppercase' }}>
-                        {orden.es_cuenta_corriente ? 'SALDO CC' : `RESTANTE DE $${orden.presupuesto_total}`}
+                        {orden.es_cuenta_corriente ? 'SALDO CC' : `RESTANTE DE $${orden.presupuestoTotal}`}
                       </div>
                     </>
                   )}
