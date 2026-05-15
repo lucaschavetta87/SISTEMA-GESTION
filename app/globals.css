@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* --- VARIABLES DE COLOR CONTROL CEL --- */
+:root {
+  --background: #0f172a; /* Azul noche profundo */
+  --foreground: #f8fafc; /* Blanco azulado */
+  --card-bg: #1e293b;    /* Gris azulado para tarjetas */
+  --border: #334155;     /* Color de bordes sutiles */
+  --accent: #3b82f6;     /* Azul ControlCel */
+  --success: #10b981;    /* Verde ARCA */
+}
+
+/* --- ESTILOS BASE --- */
+body {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease;
+}
+
+/* --- TRUCO MAESTRO: FORZAR MODO OSCURO EN TODO EL SISTEMA --- */
+/* Esto detecta cualquier div que tenga fondo blanco y lo vuelve oscuro automáticamente */
+div[style*="background-color: rgb(255, 255, 255)"], 
+div[style*="background-color: #fff"],
+div[style*="background-color: white"],
+div[style*="background: white"],
+div[style*="background: #fff"] {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+/* --- INPUTS Y FORMULARIOS UNIFICADOS --- */
+input, select, textarea {
+  background-color: #0f172a !important; /* Fondo más oscuro para los inputs */
+  color: #f8fafc !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  padding: 10px !important;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus, select:focus {
+  border-color: var(--accent) !important;
+}
+
+input::placeholder {
+  color: #64748b;
+}
+
+/* --- SCROLLBAR ESTILO DARK --- */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* --- ESTILOS PARA LAS TARJETAS (DASHBOARD) --- */
+.dashboard-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 25px;
+  transition: transform 0.2s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+}
+
+/* --- PREVENCIÓN PARA IMPRESIÓN --- */
+/* Esto asegura que los tickets NO salgan negros al imprimir */
+@media print {
+  body {
+    background-color: #fff !important;
+    color: #000 !important;
+  }
+  div, p, span, h1, h2, h3 {
+    background-color: #fff !important;
+    color: #000 !important;
+    border-color: #000 !important;
+    box-shadow: none !important;
+  }
+}
