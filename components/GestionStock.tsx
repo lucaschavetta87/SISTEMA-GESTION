@@ -50,28 +50,45 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
   // --- LOGICA DE GUARDADO ---
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Adaptamos los nombres de campos a la estructura de la base de datos
     const datosProcesados = {
       codigo: form.codigo,
       nombre: form.nombre,
       cantidad: Number(form.cantidad),
-      precio: Number(form.precio),
-      ultima_actualizacion: new Date().toLocaleString()
+      precio_venta: Number(form.precio), // Coincide con el script SQL inicial
+      updated_at: new Date().toISOString() // Formato correcto para PostgreSQL
     };
 
     if (editando) {
-      const { error } = await supabase.from('stock').update(datosProcesados).eq('id', form.id);
+      const { error } = await supabase
+        .from('stock')
+        .update(datosProcesados)
+        .eq('id', form.id);
+
       if (!error) {
-        setStock(stock.map((item: any) => item.id === form.id ? { ...datosProcesados, id: form.id } : item));
+        setStock(stock.map((item: any) => 
+          item.id === form.id ? { ...item, ...datosProcesados, precio: datosProcesados.precio_venta } : item
+        ));
         setEditando(false);
         setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '' });
+      } else {
+        console.error("Error al actualizar:", error.message);
       }
     } else {
-      const nuevoId = Date.now().toString();
-      const nuevoItem = { ...datosProcesados, id: nuevoId };
-      const { error } = await supabase.from('stock').insert([nuevoItem]);
-      if (!error) {
+      // No enviamos ID manual, dejamos que Supabase lo genere
+      const { data, error } = await supabase
+        .from('stock')
+        .insert([datosProcesados])
+        .select(); // Obtenemos el item creado con su ID real
+
+      if (!error && data) {
+        // Mapeamos precio_venta de vuelta a precio para mantener la consistencia del estado local
+        const nuevoItem = { ...data[0], precio: data[0].precio_venta };
         setStock([...stock, nuevoItem]);
         setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '' });
+      } else {
+        console.error("Error al guardar:", error?.message);
       }
     }
   };
@@ -150,10 +167,10 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
                     {item.cantidad} u.
                   </span>
                 </td>
-                <td style={{ color: theme.text, fontWeight: '700' }}>${Number(item.precio).toLocaleString()}</td>
+                <td style={{ color: theme.text, fontWeight: '700' }}>${Number(item.precio_venta || item.precio).toLocaleString()}</td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => {setForm(item); setEditando(true);}} style={actionBtnStyle('#3b82f6')}>✏️</button>
+                    <button onClick={() => {setForm({ ...item, precio: item.precio_venta || item.precio }); setEditando(true);}} style={actionBtnStyle('#3b82f6')}>✏️</button>
                     <button onClick={() => borrarItem(item.id)} style={actionBtnStyle('#ef4444')}>🗑️</button>
                   </div>
                 </td>

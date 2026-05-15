@@ -41,6 +41,7 @@ export default function Presupuestos({ darkMode = true }: { darkMode?: boolean }
     if (data) setHistorial(data);
   };
 
+  // Mantenemos las funciones de impresión exactamente igual
   const imprimirTicket = (datosPresu: any) => {
     const ventana = window.open('', '_blank');
     if (!ventana) return;
@@ -65,14 +66,14 @@ export default function Presupuestos({ darkMode = true }: { darkMode?: boolean }
           <div class="divider"></div>
           <div class="text-center">PRESUPUESTO TÉCNICO</div>
           <div class="divider"></div>
-          <div>FECHA: ${datosPresu.fecha}</div>
+          <div>FECHA: ${new Date(datosPresu.fecha).toLocaleDateString('es-AR')}</div>
           <div>CLIENTE: ${datosPresu.cliente.toUpperCase()}</div>
           <div>DNI/CUIT: ${datosPresu.dni || 'N/C'}</div>
           <div>TEL: ${datosPresu.telefono}</div>
           <div>EQUIPO: ${datosPresu.equipo.toUpperCase()}</div>
           <div class="divider"></div>
           <div class="text-center">-- DETALLE --</div>
-          ${datosPresu.detalle_items.map((i: any) => `
+          ${(datosPresu.detalle_items || datosPresu.detalle).map((i: any) => `
             <div style="display:flex; justify-content:space-between; margin: 2px 0;">
               <span>* ${i.descripcion.toUpperCase()}</span>
               <span>$${Number(i.precio).toLocaleString('es-AR')}</span>
@@ -80,7 +81,7 @@ export default function Presupuestos({ darkMode = true }: { darkMode?: boolean }
           `).join('')}
           <div class="divider"></div>
           <div style="font-size: 14px; display:flex; justify-content:space-between;">
-            <span>TOTAL:</span> <span>$${Number(datosPresu.monto).toLocaleString('es-AR')}</span>
+            <span>TOTAL:</span> <span>$${Number(datosPresu.monto || datosPresu.total).toLocaleString('es-AR')}</span>
           </div>
           ${datosPresu.nota ? `
             <div class="divider"></div>
@@ -136,13 +137,13 @@ export default function Presupuestos({ darkMode = true }: { darkMode?: boolean }
               www.TUWEB.com.ar
             </div>
           </div>
-          <div style="text-align:right; margin-bottom:10px;">PRESUPUESTO N°: ${datosPresu.id} | FECHA: ${datosPresu.fecha}</div>
+          <div style="text-align:right; margin-bottom:10px;">PRESUPUESTO N°: ${datosPresu.id} | FECHA: ${new Date(datosPresu.fecha).toLocaleDateString('es-AR')}</div>
           <div class="info-grid">
             <div><b>CLIENTE:</b> ${datosPresu.cliente.toUpperCase()}</div>
             <div><b>DNI/CUIT:</b> ${datosPresu.dni || 'N/C'}</div>
             <div><b>TELÉFONO:</b> ${datosPresu.telefono}</div>
             <div><b>EQUIPO:</b> ${datosPresu.equipo.toUpperCase()}</div>
-            <div><b>MODELO:</b> ${datosPresu.modelo.toUpperCase()}</div>
+            <div><b>MODELO:</b> ${datosPresu.modelo?.toUpperCase() || ''}</div>
             <div><b>IMEI/SN:</b> ${datosPresu.imei || 'N/C'}</div>
           </div>
           <table>
@@ -150,23 +151,16 @@ export default function Presupuestos({ darkMode = true }: { darkMode?: boolean }
               <tr><th>DESCRIPCIÓN DEL SERVICIO</th><th style="text-align:right;">SUBTOTAL</th></tr>
             </thead>
             <tbody>
-              ${datosPresu.detalle_items.map((i: any) => `
+              ${(datosPresu.detalle_items || datosPresu.detalle).map((i: any) => `
                 <tr><td>${i.descripcion.toUpperCase()}</td><td style="text-align:right;">$${Number(i.precio).toLocaleString('es-AR')}</td></tr>
               `).join('')}
             </tbody>
           </table>
-          <div class="total-box">TOTAL ESTIMADO: $${Number(datosPresu.monto).toLocaleString('es-AR')}</div>
+          <div class="total-box">TOTAL ESTIMADO: $${Number(datosPresu.monto || datosPresu.total).toLocaleString('es-AR')}</div>
           
-          ${datosPresu.nota ? `
-            <div class="nota-box">
-              <b>OBSERVACIONES:</b><br>
-              ${datosPresu.nota.toUpperCase()}
-            </div>
-          ` : ''}
+          ${datosPresu.nota ? `<div class="nota-box"><b>OBSERVACIONES:</b><br>${datosPresu.nota.toUpperCase()}</div>` : ''}
 
-          <div class="footer">
-            <b>ESTE PRESUPUESTO TIENE UNA VALIDEZ DE 10 DÍAS CORRIDOS.</b>
-          </div>
+          <div class="footer"><b>ESTE PRESUPUESTO TIENE UNA VALIDEZ DE 10 DÍAS CORRIDOS.</b></div>
           <script>window.onload = function() { window.print(); setTimeout(window.close, 800); };</script>
         </body>
       </html>
@@ -187,33 +181,40 @@ export default function Presupuestos({ darkMode = true }: { darkMode?: boolean }
   const enviarWhatsApp = (datos: any) => {
     const telefono = datos.telefono.replace(/\D/g, '');
     const numeroFinal = telefono.startsWith('54') ? telefono : `549${telefono}`;
-    const detalleTexto = datos.detalle_items.map((i: any) => `• ${i.descripcion}: *$${Number(i.precio).toLocaleString('es-AR')}*`).join('%0A');
-    const mensaje = `*PRESUPUESTO - GESTION*%0A%0A👤 *Cliente:* ${datos.cliente.toUpperCase()}%0A📱 *Equipo:* ${datos.equipo.toUpperCase()}%0A%0A*DETALLE:*%0A${detalleTexto}%0A%0A💰 *TOTAL: $${Number(datos.monto).toLocaleString('es-AR')}*%0AValidez: 10 días.`;
+    const itemsList = datos.detalle_items || datos.detalle;
+    const detalleTexto = itemsList.map((i: any) => `• ${i.descripcion}: *$${Number(i.precio).toLocaleString('es-AR')}*`).join('%0A');
+    const mensaje = `*PRESUPUESTO - GESTION*%0A%0A👤 *Cliente:* ${datos.cliente.toUpperCase()}%0A📱 *Equipo:* ${datos.equipo.toUpperCase()}%0A%0A*DETALLE:*%0A${detalleTexto}%0A%0A💰 *TOTAL: $${Number(datos.monto || datos.total).toLocaleString('es-AR')}*%0AValidez: 10 días.`;
     window.open(`https://api.whatsapp.com/send?phone=${numeroFinal}&text=${mensaje}`, '_blank');
   };
 
   const guardarPresupuesto = async (tipo: 'TICKET' | 'A4') => {
     if (!form.nombre || calcularTotal() === 0) return alert("Faltan datos");
-    const nuevoPresu = {
-      id: Date.now(),
-      fecha: new Date().toLocaleString('es-AR'),
+    
+    // IMPORTANTE: Adaptamos los nombres a lo que definimos en el SQL de Supabase
+    const datosEnvio = {
+      fecha: new Date().toISOString(), // Formato ISO para evitar error de rango
       cliente: form.nombre,
       telefono: form.telefono,
       dni: form.dni,
       equipo: `${form.producto} ${form.marca}`,
       modelo: form.detalles,
       imei: form.imei,
-      monto: calcularTotal(),
+      total: calcularTotal(), // Cambiado 'monto' por 'total' para que coincida con SQL
       nota: form.nota,
-      detalle_items: items.filter(i => i.descripcion !== '')
+      detalle: items.filter(i => i.descripcion !== '') // Cambiado 'detalle_items' por 'detalle'
     };
-    const { error } = await supabase.from('presupuestos').insert([nuevoPresu]);
-    if (!error) {
-      if (tipo === 'TICKET') imprimirTicket(nuevoPresu);
-      else generarPDFA4(nuevoPresu);
+
+    // Quitamos el ID manual para que Supabase use el SERIAL
+    const { data, error } = await supabase.from('presupuestos').insert([datosEnvio]).select();
+    
+    if (!error && data) {
+      if (tipo === 'TICKET') imprimirTicket(data[0]);
+      else generarPDFA4(data[0]);
       cargarHistorial();
       setForm({ nombre: '', telefono: '', dni: '', producto: '', marca: '', detalles: '', imei: '', nota: '' });
       setItems([{ descripcion: '', precio: 0 }, { descripcion: '', precio: 0 }, { descripcion: '', precio: 0 }]);
+    } else {
+        alert("Error al guardar presupuesto: " + (error?.message || "Error desconocido"));
     }
   };
 
@@ -273,8 +274,8 @@ export default function Presupuestos({ darkMode = true }: { darkMode?: boolean }
           {historial.map((p) => (
             <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', backgroundColor: theme.innerBox, borderRadius: '15px', border: `1px solid ${theme.border}` }}>
               <div>
-                <div style={{ fontWeight: 'bold', color: theme.text }}>{p.cliente} - ${Number(p.monto).toLocaleString()}</div>
-                <div style={{ fontSize: '0.8rem', color: theme.subtext }}>{p.fecha} | {p.equipo}</div>
+                <div style={{ fontWeight: 'bold', color: theme.text }}>{p.cliente} - ${Number(p.total || p.monto).toLocaleString()}</div>
+                <div style={{ fontSize: '0.8rem', color: theme.subtext }}>{new Date(p.fecha).toLocaleDateString('es-AR')} | {p.equipo}</div>
               </div>
               <div style={{ display: 'flex', gap: '5px' }}>
                 <button onClick={() => enviarWhatsApp(p)} style={{ padding: '8px', backgroundColor: '#25d366', color: '#fff', border: 'none', borderRadius: '8px' }}>📱</button>

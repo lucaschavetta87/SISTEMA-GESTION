@@ -80,7 +80,7 @@ export default function Servicio({ onSave, darkMode = true }: { onSave: (orden: 
       ...formData,
       reparaciones,
       id: Date.now(),
-      fecha: new Date().toLocaleDateString(),
+      fecha: new Date().toISOString(), 
       saldo: formData.presupuestoTotal - formData.seña,
       estado_orden: 'Pendiente',
       cliente_id: clienteSeleccionado?.id || null,
@@ -90,6 +90,7 @@ export default function Servicio({ onSave, darkMode = true }: { onSave: (orden: 
     setClienteSeleccionado(null);
     setEsCC(false);
     setFiltroCliente('');
+    // Reset opcional de formulario aquí si lo deseas
   };
 
   const inputStyle = {
@@ -156,7 +157,7 @@ export default function Servicio({ onSave, darkMode = true }: { onSave: (orden: 
           <div style={{ padding: '15px', backgroundColor: darkMode ? 'rgba(139, 92, 246, 0.1)' : '#f5f3ff', borderRadius: '12px', border: '1px solid #8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <span style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: '0.9rem' }}>💳 Cliente detectado: {clienteSeleccionado.nombre}</span>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: theme.label }}>Saldo actual en CC: ${clienteSeleccionado.saldo_cc.toLocaleString()}</p>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: theme.label }}>Saldo actual en CC: ${clienteSeleccionado.saldo_cc?.toLocaleString() || 0}</p>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: theme.text, fontWeight: 'bold', cursor: 'pointer' }}>
               <input type="checkbox" checked={esCC} onChange={(e) => setEsCC(e.target.checked)} style={{ width: '18px', height: '18px' }} />
