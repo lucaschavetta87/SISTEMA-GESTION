@@ -3,7 +3,8 @@ import React, { useState, useRef } from 'react';
 import { supabase } from '../app/supabase';
 
 export default function Stock({ stock, setStock, darkMode = true }: any) {
-  const [form, setForm] = useState({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '' });
+  // AGREGAMOS 'categoria' AL ESTADO INICIAL DEL FORMULARIO
+  const [form, setForm] = useState({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
   const [editando, setEditando] = useState(false);
   const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +90,7 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
       cantidad: Number(form.cantidad),
       precio_venta: Number(form.precio),
       imagen_url: urlDeFoto, 
+      categoria: form.categoria, // ENVIAMOS LA CATEGORÍA SELECCIONADA A SUPABASE
       updated_at: new Date().toISOString()
     };
 
@@ -103,7 +105,7 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
           item.id === form.id ? { ...item, ...datosProcesados, precio: datosProcesados.precio_venta } : item
         ));
         setEditando(false);
-        setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '' });
+        setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
         setImagenArchivo(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
@@ -118,7 +120,7 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
       if (!error && data) {
         const nuevoItem = { ...data[0], precio: data[0].precio_venta };
         setStock([...stock, nuevoItem]);
-        setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '' });
+        setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
         setImagenArchivo(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
@@ -155,6 +157,16 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
           <input type="number" placeholder="Stock" value={form.cantidad} onChange={e => setForm({...form, cantidad: e.target.value})} required style={{...inputStyle, width: '90px'}} />
           <input type="number" placeholder="Precio $" value={form.precio} onChange={e => setForm({...form, precio: e.target.value})} required style={inputStyle} />
           
+          {/* CAMPO SELECT DESPLEGABLE PARA ADICIONAR LA CATEGORÍA */}
+          <select 
+            value={form.categoria} 
+            onChange={e => setForm({...form, categoria: e.target.value})} 
+            style={{ ...inputStyle, cursor: 'pointer', paddingRight: '25px' }}
+          >
+            <option value="celulares">📱 Celulares</option>
+            <option value="accesorios">🔌 Accesorios</option>
+          </select>
+
           {/* CUADRO PARA SELECCIONAR IMAGEN */}
           <input 
             type="file" 
@@ -168,7 +180,7 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
             {editando ? 'ACTUALIZAR' : 'GUARDAR'}
           </button>
           {editando && (
-            <button type="button" onClick={() => {setEditando(false); setForm({id:'', codigo:'', nombre:'', cantidad:'', precio:'', imagen_url:''}); setImagenArchivo(null); if (fileInputRef.current) fileInputRef.current.value = '';}} style={{ ...btnBaseStyle, backgroundColor: '#475569' }}>
+            <button type="button" onClick={() => {setEditando(false); setForm({id:'', codigo:'', nombre:'', cantidad:'', precio:'', imagen_url:'', categoria: 'celulares'}); setImagenArchivo(null); if (fileInputRef.current) fileInputRef.current.value = '';}} style={{ ...btnBaseStyle, backgroundColor: '#475569' }}>
               CANCELAR
             </button>
           )}
@@ -189,6 +201,7 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
             <tr style={{ borderBottom: `1px solid ${theme.border}`, textAlign: 'left', fontSize: '0.75rem', color: theme.subtext }}>
               <th style={{ padding: '15px' }}>CÓDIGO</th>
               <th>PRODUCTO</th>
+              <th>CATEGORÍA</th>
               <th>CANTIDAD</th>
               <th>PRECIO UNIT.</th>
               <th style={{ textAlign: 'right' }}>ACCIONES</th>
@@ -200,7 +213,6 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
                 <td style={{ padding: '15px', fontFamily: 'monospace', color: theme.subtext }}>{item.codigo || '---'}</td>
                 <td style={{ color: theme.text, fontWeight: '600' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {/* MINIATURA DE LA IMAGEN O MARCADOR GENÉRICO */}
                     {item.imagen_url ? (
                       <img src={item.imagen_url} alt={item.nombre} style={{ width: '35px', height: '35px', borderRadius: '8px', objectFit: 'cover', border: `1px solid ${theme.border}` }} />
                     ) : (
@@ -208,6 +220,10 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
                     )}
                     {item.nombre}
                   </div>
+                </td>
+                {/* COLUMNA DE MUESTRA PARA LA CATEGORÍA EN LA TABLA INTERNA */}
+                <td style={{ color: theme.text, fontSize: '0.85rem', textTransform: 'uppercase', fontWeight: '700' }}>
+                  {item.categoria === 'accesorios' ? '🔌 Accesorios' : '📱 Celulares'}
                 </td>
                 <td>
                   <span style={{ 
@@ -224,7 +240,8 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
                 <td style={{ color: theme.text, fontWeight: '700' }}>${Number(item.precio_venta || item.precio).toLocaleString()}</td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => {setForm({ ...item, precio: item.precio_venta || item.precio, imagen_url: item.imagen_url || '' }); setEditando(true);}} style={actionBtnStyle('#3b82f6')}>✏️</button>
+                    {/* FIJAMOS EL RELLENO DEL ESTADO ACÁ SIN ERRORES DE SINTAXIS */}
+                    <button onClick={() => { setForm({ ...item, precio: item.precio_venta || item.precio, imagen_url: item.imagen_url || '', categoria: item.categoria || 'celulares' }); setEditando(true); }} style={actionBtnStyle('#3b82f6')}>✏️</button>
                     <button onClick={() => borrarItem(item.id)} style={actionBtnStyle('#ef4444')}>🗑️</button>
                   </div>
                 </td>

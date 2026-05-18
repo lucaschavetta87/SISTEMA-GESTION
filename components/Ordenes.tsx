@@ -68,7 +68,7 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
     if (!orden.telefono) return;
     const telefono = orden.telefono.replace(/\D/g, ''); 
     const numeroFinal = telefono.startsWith('54') ? telefono : `549${telefono}`;
-    const mensaje = `Hola *${orden.nombre}*, te informamos de *Servicio Tecnico* 📱 que tu equipo *${orden.equipo}* ya está listo. ¡Te esperamos!`;
+    const mensaje = `Hola *${orden.nombre}*, te informamos de *Servicio Técnico* 📱 que tu equipo *${orden.equipo}* ya está listo. ¡Te esperamos!`;
     window.open(`https://api.whatsapp.com/send?phone=${numeroFinal}&text=${mensaje}`, '_blank');
   };
 
@@ -192,11 +192,16 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
             <div key={orden.id} style={{ backgroundColor: theme.cardBg, borderRadius: '20px', padding: '24px', boxShadow: darkMode ? '0 4px 15px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)', border: `1px solid ${theme.border}`, display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: '20px', alignItems: 'center', position: 'relative', transition: 'all 0.3s ease' }}>
               
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* CAMBIO CLAVE: Agregamos el número de orden de forma elegante */}
+                    <span style={{ color: theme.textSub, fontWeight: 'bold', fontSize: '1rem', fontFamily: 'monospace' }}>
+                      #{orden.id.toString().slice(-6)}
+                    </span>
+                    <span style={{ color: theme.textSub, fontWeight: 'bold', fontSize: '1rem' }}>-</span>
                     <div style={{ fontSize: '1.1rem', fontWeight: '800', color: theme.textMain }}>{orden.nombre}</div>
                     {orden.es_cuenta_corriente && <span style={{ backgroundColor: '#8b5cf6', color: '#fff', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '6px', fontWeight: '900' }}>CUENTA CTE</span>}
                 </div>
-                <div style={{ color: '#3b82f6', fontWeight: '700', fontSize: '0.9rem' }}>📞 {orden.telefono}</div>
+                <div style={{ color: '#3b82f6', fontWeight: '700', fontSize: '0.9rem', marginTop: '4px' }}>📞 {orden.telefono}</div>
                 <div style={{ marginTop: '8px', fontSize: '0.95rem', color: theme.textMain }}>📱 <strong>{orden.equipo}</strong></div>
                 <div style={{ fontSize: '0.75rem', color: theme.textSub, marginTop: '4px' }}>INGRESÓ: {new Date(orden.fecha).toLocaleDateString('es-AR')}</div>
                 
