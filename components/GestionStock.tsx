@@ -1,10 +1,12 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { supabase } from '../app/supabase';
 
 export default function Stock({ stock, setStock, darkMode = true }: any) {
-  const [form, setForm] = useState({ id: '', codigo: '', nombre: '', cantidad: '', precio: '' });
+  const [form, setForm] = useState({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '' });
   const [editando, setEditando] = useState(false);
+  const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- CONFIGURACIÓN DE COLORES DINÁMICOS ---
   const theme = {
@@ -47,17 +49,47 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
     padding: '6px 10px' 
   });
 
+  // --- LOGICA AUXILIAR PARA SUBIR LA IMAGEN ---
+  const subirImagen = async (archivo: File): Promise<string | null> => {
+    try {
+      const nombreArchivo = `${Date.now()}_${archivo.name.replace(/\s+/g, '_')}`;
+      const { data, error } = await supabase.storage
+        .from('imagenes_stock')
+        .upload(nombreArchivo, archivo);
+
+      if (error) throw error;
+
+      // Obtenemos la URL pública del archivo subido
+      const { data: publicUrlData } = supabase.storage
+        .from('imagenes_stock')
+        .getPublicUrl(nombreArchivo);
+
+      return publicUrlData.publicUrl;
+    } catch (err) {
+      console.error("Error al subir imagen:", err);
+      return null;
+    }
+  };
+
   // --- LOGICA DE GUARDADO ---
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Adaptamos los nombres de campos a la estructura de la base de datos
+    let urlDeFoto = form.imagen_url;
+
+    // Si el usuario seleccionó un archivo nuevo, lo subimos primero
+    if (imagenArchivo) {
+      const urlSubida = await subirImagen(imagenArchivo);
+      if (urlSubida) urlDeFoto = urlSubida;
+    }
+
     const datosProcesados = {
       codigo: form.codigo,
       nombre: form.nombre,
       cantidad: Number(form.cantidad),
-      precio_venta: Number(form.precio), // Coincide con el script SQL inicial
-      updated_at: new Date().toISOString() // Formato correcto para PostgreSQL
+      precio_venta: Number(form.precio),
+      imagen_url: urlDeFoto, 
+      updated_at: new Date().toISOString()
     };
 
     if (editando) {
@@ -71,22 +103,24 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
           item.id === form.id ? { ...item, ...datosProcesados, precio: datosProcesados.precio_venta } : item
         ));
         setEditando(false);
-        setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '' });
+        setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '' });
+        setImagenArchivo(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
         console.error("Error al actualizar:", error.message);
       }
     } else {
-      // No enviamos ID manual, dejamos que Supabase lo genere
       const { data, error } = await supabase
         .from('stock')
         .insert([datosProcesados])
-        .select(); // Obtenemos el item creado con su ID real
+        .select();
 
       if (!error && data) {
-        // Mapeamos precio_venta de vuelta a precio para mantener la consistencia del estado local
         const nuevoItem = { ...data[0], precio: data[0].precio_venta };
         setStock([...stock, nuevoItem]);
-        setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '' });
+        setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '' });
+        setImagenArchivo(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
         console.error("Error al guardar:", error?.message);
       }
@@ -115,16 +149,26 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
         <h3 style={{ color: editando ? '#ed8936' : '#3b82f6', marginBottom: '20px', fontWeight: '800' }}>
           {editando ? '✏️ EDITANDO EN LA NUBE' : '➕ NUEVO REPUESTO / ARTÍCULO'}
         </h3>
-        <form onSubmit={guardar} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <form onSubmit={guardar} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input type="text" placeholder="Código" value={form.codigo} onChange={e => setForm({...form, codigo: e.target.value})} style={inputStyle} />
-          <input type="text" placeholder="Nombre del Producto" value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} required style={{...inputStyle, flex: 1}} />
+          <input type="text" placeholder="Nombre del Producto" value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} required style={{...inputStyle, flex: 1, minWidth: '200px'}} />
           <input type="number" placeholder="Stock" value={form.cantidad} onChange={e => setForm({...form, cantidad: e.target.value})} required style={{...inputStyle, width: '90px'}} />
           <input type="number" placeholder="Precio $" value={form.precio} onChange={e => setForm({...form, precio: e.target.value})} required style={inputStyle} />
+          
+          {/* CUADRO PARA SELECCIONAR IMAGEN */}
+          <input 
+            type="file" 
+            accept="image/*" 
+            ref={fileInputRef}
+            onChange={e => setImagenArchivo(e.target.files ? e.target.files[0] : null)} 
+            style={{ ...inputStyle, width: '220px', fontSize: '12px', padding: '8px' }} 
+          />
+
           <button type="submit" style={{ ...btnBaseStyle, backgroundColor: editando ? '#ed8936' : '#3b82f6' }}>
             {editando ? 'ACTUALIZAR' : 'GUARDAR'}
           </button>
           {editando && (
-            <button type="button" onClick={() => {setEditando(false); setForm({id:'', codigo:'', nombre:'', cantidad:'', precio:''})}} style={{ ...btnBaseStyle, backgroundColor: '#475569' }}>
+            <button type="button" onClick={() => {setEditando(false); setForm({id:'', codigo:'', nombre:'', cantidad:'', precio:'', imagen_url:''}); setImagenArchivo(null); if (fileInputRef.current) fileInputRef.current.value = '';}} style={{ ...btnBaseStyle, backgroundColor: '#475569' }}>
               CANCELAR
             </button>
           )}
@@ -154,7 +198,17 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
             {stock.map((item: any) => (
               <tr key={item.id} style={{ borderBottom: `1px solid ${theme.rowBorder}` }}>
                 <td style={{ padding: '15px', fontFamily: 'monospace', color: theme.subtext }}>{item.codigo || '---'}</td>
-                <td style={{ color: theme.text, fontWeight: '600' }}>{item.nombre}</td>
+                <td style={{ color: theme.text, fontWeight: '600' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {/* MINIATURA DE LA IMAGEN O MARCADOR GENÉRICO */}
+                    {item.imagen_url ? (
+                      <img src={item.imagen_url} alt={item.nombre} style={{ width: '35px', height: '35px', borderRadius: '8px', objectFit: 'cover', border: `1px solid ${theme.border}` }} />
+                    ) : (
+                      <div style={{ width: '35px', height: '35px', borderRadius: '8px', backgroundColor: darkMode ? '#334155' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>📦</div>
+                    )}
+                    {item.nombre}
+                  </div>
+                </td>
                 <td>
                   <span style={{ 
                     padding: '4px 10px', 
@@ -170,7 +224,7 @@ export default function Stock({ stock, setStock, darkMode = true }: any) {
                 <td style={{ color: theme.text, fontWeight: '700' }}>${Number(item.precio_venta || item.precio).toLocaleString()}</td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => {setForm({ ...item, precio: item.precio_venta || item.precio }); setEditando(true);}} style={actionBtnStyle('#3b82f6')}>✏️</button>
+                    <button onClick={() => {setForm({ ...item, precio: item.precio_venta || item.precio, imagen_url: item.imagen_url || '' }); setEditando(true);}} style={actionBtnStyle('#3b82f6')}>✏️</button>
                     <button onClick={() => borrarItem(item.id)} style={actionBtnStyle('#ef4444')}>🗑️</button>
                   </div>
                 </td>
