@@ -1,11 +1,12 @@
 import { createBrowserClient } from "@supabase/ssr";
+import {
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+  faltanCredenciales,
+  errorFaltanCredenciales,
+} from "../../supabase-config";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-export const createClient = () =>
-  createBrowserClient(
-    supabaseUrl!,
-    supabaseKey!,
-  );
+export const createClient = () => {
+  if (faltanCredenciales()) throw errorFaltanCredenciales();
+  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+};
