@@ -5,6 +5,8 @@ import { supabase } from '../app/supabase';
 export default function Stock({ stock, setStock, darkMode = true, sucursalId = null, sucursales = [] }: any) {
   const [busquedaStock, setBusquedaStock] = useState('');
   const [stockGlobal, setStockGlobal] = useState<any[]>([]);
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 10;
 
   const cargarTodoStock = async () => {
     const { data } = await supabase.from('stock').select('*').order('nombre', { ascending: true });
@@ -14,6 +16,10 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
   useEffect(() => {
     cargarTodoStock();
   }, []);
+
+  useEffect(() => {
+    setPagina(1);
+  }, [busquedaStock]);
 
   const nombreSucursal = (id: any) => {
     const s = sucursales.find((x: any) => x.id === id);
@@ -168,9 +174,37 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
     }
   };
 
+  const productosFiltrados = stockGlobal.filter((item: any) =>
+    String(item.nombre || '').toLowerCase().includes(busquedaStock.toLowerCase()) ||
+    String(item.codigo || '').toLowerCase().includes(busquedaStock.toLowerCase())
+  );
+  const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const productosPagina = productosFiltrados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
+      {/* CARTEL TOTAL PRODUCTOS */}
+      <div style={{
+        backgroundColor: theme.card,
+        padding: '16px 20px',
+        borderRadius: '16px',
+        border: `1px solid ${theme.border}`,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '10px'
+      }}>
+        <span style={{ color: theme.text, fontWeight: '800', fontSize: '1rem' }}>
+          📦 Productos cargados en total: {stockGlobal.length}
+        </span>
+        <span style={{ color: theme.subtext, fontWeight: '700', fontSize: '0.9rem' }}>
+          Sucursal: {sucursalId ? nombreSucursal(sucursalId) : 'Todas'}
+        </span>
+      </div>
+
       {/* FORMULARIO DE CARGA */}
       <div style={{ 
         border: editando ? '2px solid #ed8936' : `1px solid ${theme.border}`, 
@@ -252,12 +286,7 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
             </tr>
           </thead>
           <tbody>
-            {stockGlobal
-              .filter((item: any) =>
-                String(item.nombre || '').toLowerCase().includes(busquedaStock.toLowerCase()) ||
-                String(item.codigo || '').toLowerCase().includes(busquedaStock.toLowerCase())
-              )
-              .map((item: any) => (
+            {productosPagina.map((item: any) => (
               <tr key={item.id} style={{ borderBottom: `1px solid ${theme.rowBorder}` }}>
                 <td style={{ padding: '15px', fontFamily: 'monospace', color: theme.subtext }}>{item.codigo || '---'}</td>
                 <td style={{ color: theme.text, fontWeight: '600' }}>
@@ -301,6 +330,29 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* PAGINADOR */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+        <button
+          type="button"
+          onClick={() => setPagina(p => Math.max(1, p - 1))}
+          disabled={paginaActual <= 1}
+          style={{ ...btnBaseStyle, backgroundColor: paginaActual <= 1 ? '#94a3b8' : '#3b82f6', padding: '8px 16px', cursor: paginaActual <= 1 ? 'not-allowed' : 'pointer' }}
+        >
+          ◀ Anterior
+        </button>
+        <span style={{ color: theme.text, fontWeight: '700', fontSize: '0.9rem' }}>
+          Página {paginaActual} de {totalPaginas} ({productosFiltrados.length} productos)
+        </span>
+        <button
+          type="button"
+          onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+          disabled={paginaActual >= totalPaginas}
+          style={{ ...btnBaseStyle, backgroundColor: paginaActual >= totalPaginas ? '#94a3b8' : '#3b82f6', padding: '8px 16px', cursor: paginaActual >= totalPaginas ? 'not-allowed' : 'pointer' }}
+        >
+          Siguiente ▶
+        </button>
       </div>
     </div>
   );
