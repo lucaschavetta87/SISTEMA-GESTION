@@ -148,3 +148,10 @@ grant usage, select on all sequences in schema public to anon, authenticated;
 -- ---------------------------------------------------------------------------
 select id, nombre, es_principal from public.sucursales order by id;
 select id, usuario, rol, sucursal_id, modulos from public.usuarios order by id;
+
+-- ---------------------------------------------------------------------------
+-- 9) RLS: la app entra con la anon key y maneja la autenticación por su cuenta,
+--    por lo que la tabla "ventas" (que tenía RLS activo) bloqueaba los INSERT.
+--    Se deshabilita RLS en ventas para que el Punto de Venta pueda guardar.
+-- ---------------------------------------------------------------------------
+alter table public.ventas disable row level security;

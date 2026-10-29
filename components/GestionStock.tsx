@@ -1,8 +1,27 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../app/supabase';
 
-export default function Stock({ stock, setStock, darkMode = true, sucursalId = null }: any) {
+export default function Stock({ stock, setStock, darkMode = true, sucursalId = null, sucursales = [] }: any) {
+  const [busquedaStock, setBusquedaStock] = useState('');
+  const [stockGlobal, setStockGlobal] = useState<any[]>([]);
+
+  const cargarTodoStock = async () => {
+    const { data } = await supabase.from('stock').select('*').order('nombre', { ascending: true });
+    if (data) setStockGlobal(data);
+  };
+
+  useEffect(() => {
+    cargarTodoStock();
+  }, []);
+
+  const nombreSucursal = (id: any) => {
+    const s = sucursales.find((x: any) => x.id === id);
+    if (s?.nombre) return s.nombre;
+    if (id === 1) return 'Sucursal 1 - Catamarca 42';
+    if (id === 2) return 'sucursal 2 - LUJAN';
+    return 'Sin sucursal';
+  };
   // AGREGAMOS 'categoria' AL ESTADO INICIAL DEL FORMULARIO
   const [form, setForm] = useState({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
   const [editando, setEditando] = useState(false);
@@ -101,9 +120,16 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
         .eq('id', form.id);
 
       if (!error) {
-        setStock(stock.map((item: any) => 
-          item.id === form.id ? { ...item, ...datosProcesados, precio: datosProcesados.precio_venta } : item
+        const itemActualizado = { ...datosProcesados, precio: datosProcesados.precio_venta };
+        setStockGlobal((prev: any[]) => prev.map((item: any) =>
+          item.id === form.id ? { ...item, ...itemActualizado } : item
         ));
+        const sucursalItem = stockGlobal.find((i: any) => i.id === form.id)?.sucursal_id;
+        if (sucursalItem === sucursalId) {
+          setStock((prev: any[]) => prev.map((item: any) =>
+            item.id === form.id ? { ...item, ...itemActualizado } : item
+          ));
+        }
         setEditando(false);
         setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
         setImagenArchivo(null);
@@ -119,7 +145,10 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
 
       if (!error && data) {
         const nuevoItem = { ...data[0], precio: data[0].precio_venta };
-        setStock([...stock, nuevoItem]);
+        setStockGlobal((prev: any[]) => [...prev, nuevoItem].sort((a: any, b: any) => String(a.nombre).localeCompare(String(b.nombre))));
+        if (data[0].sucursal_id === sucursalId) {
+          setStock((prev: any[]) => [...prev, nuevoItem]);
+        }
         setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
         setImagenArchivo(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -132,7 +161,10 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
   const borrarItem = async (id: string) => {
     if (window.confirm("¿Seguro que querés eliminar este artículo?")) {
       const { error } = await supabase.from('stock').delete().eq('id', id);
-      if (!error) setStock(stock.filter((item: any) => item.id !== id));
+      if (!error) {
+        setStockGlobal((prev: any[]) => prev.filter((item: any) => item.id !== id));
+        setStock((prev: any[]) => prev.filter((item: any) => item.id !== id));
+      }
     }
   };
 
@@ -187,6 +219,17 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
         </form>
       </div>
 
+      {/* BUSCADOR DE STOCK */}
+      <div style={{ marginBottom: '16px' }}>
+        <input
+          type="text"
+          placeholder="🔍 Buscar producto por nombre o código..."
+          value={busquedaStock}
+          onChange={e => setBusquedaStock(e.target.value)}
+          style={{ ...inputStyle, width: '100%' }}
+        />
+      </div>
+
       {/* TABLA DE STOCK */}
       <div style={{ 
         backgroundColor: theme.card, 
@@ -202,13 +245,19 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
               <th style={{ padding: '15px' }}>CÓDIGO</th>
               <th>PRODUCTO</th>
               <th>CATEGORÍA</th>
+              <th>SUCURSAL</th>
               <th>CANTIDAD</th>
               <th>PRECIO UNIT.</th>
               <th style={{ textAlign: 'right' }}>ACCIONES</th>
             </tr>
           </thead>
           <tbody>
-            {stock.map((item: any) => (
+            {stockGlobal
+              .filter((item: any) =>
+                String(item.nombre || '').toLowerCase().includes(busquedaStock.toLowerCase()) ||
+                String(item.codigo || '').toLowerCase().includes(busquedaStock.toLowerCase())
+              )
+              .map((item: any) => (
               <tr key={item.id} style={{ borderBottom: `1px solid ${theme.rowBorder}` }}>
                 <td style={{ padding: '15px', fontFamily: 'monospace', color: theme.subtext }}>{item.codigo || '---'}</td>
                 <td style={{ color: theme.text, fontWeight: '600' }}>
@@ -224,6 +273,9 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
                 {/* COLUMNA DE MUESTRA PARA LA CATEGORÍA EN LA TABLA INTERNA */}
                 <td style={{ color: theme.text, fontSize: '0.85rem', textTransform: 'uppercase', fontWeight: '700' }}>
                   {item.categoria === 'accesorios' ? '🔌 Accesorios' : '📱 Celulares'}
+                </td>
+                <td style={{ color: theme.text, fontSize: '0.85rem', fontWeight: '600' }}>
+                  {nombreSucursal(item.sucursal_id)}
                 </td>
                 <td>
                   <span style={{ 

@@ -806,7 +806,7 @@ onCambiarSucursal={(id) => setSucursalActivaId(id)}
 
 {activeTab === "ordenes" && <Ordenes ordenes={ordenes} setOrdenes={setOrdenes} stock={stock} setStock={setStock} darkMode={darkMode} />}
 
-{activeTab === "stock" && <Stock stock={stock} setStock={setStock} darkMode={darkMode} sucursalId={sucursalActivaId} />}
+{activeTab === "stock" && <Stock stock={stock} setStock={setStock} darkMode={darkMode} sucursalId={sucursalActivaId} sucursales={sucursales} />}
 
 {activeTab === "ventas" && <Ventas stock={stock} setStock={setStock} ventas={ventas} setVentas={setVentas} darkMode={darkMode} sesion={sesion} cierre={cierreAbierto} onCambioCaja={recargarCaja} />}
 
