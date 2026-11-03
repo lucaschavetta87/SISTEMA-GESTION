@@ -8,9 +8,17 @@ interface OrdenesProps {
   stock: any[];
   setStock: any;
   darkMode?: boolean;
+  sucursales?: { id: number; nombre: string }[];
 }
 
-export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode = true }: OrdenesProps) {
+export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode = true, sucursales = [] }: OrdenesProps) {
+  const nombreSucursal = (id: any) => {
+    const s = sucursales.find((x: any) => x.id === id);
+    if (s?.nombre) return s.nombre;
+    if (id === 1) return 'Sucursal 1 - Catamarca 42';
+    if (id === 2) return 'sucursal 2 - LUJAN';
+    return 'Sin sucursal';
+  };
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [nuevoPrecio, setNuevoPrecio] = useState<string>("");
@@ -73,7 +81,37 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
     const telefono = orden.telefono.replace(/\D/g, ''); 
     const numeroFinal = telefono.startsWith('54') ? telefono : `549${telefono}`;
     const mensaje = `Hola *${orden.nombre}*, te informamos de *Servicio Técnico* 📱 que tu equipo *${orden.equipo}* ya está listo. ¡Te esperamos!`;
-    window.open(`https://api.whatsapp.com/send?phone=${numeroFinal}&text=${mensaje}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=${numeroFinal}&text=${encodeURIComponent(mensaje)}`, '_blank');
+  };
+
+  const enviarOrdenWhatsapp = (orden: any) => {
+    if (!orden.telefono) return alert('La orden no tiene teléfono.');
+    const telefono = String(orden.telefono).replace(/\D/g, '');
+    const numeroFinal = telefono.startsWith('54') ? telefono : `549${telefono}`;
+    const sucursal = nombreSucursal(orden.sucursal_id);
+    const mensaje = [
+      `*ORDEN DE SERVICIO #${String(orden.id).slice(-6)}*`,
+      `Cliente: ${orden.nombre}`,
+      `Teléfono: ${orden.telefono}`,
+      `Sucursal: ${sucursal}`,
+      `Equipo: ${orden.equipo}`,
+      `Falla: ${orden.falla}`,
+      `Presupuesto: $${totalDe(orden)}`,
+      `Seña: $${orden.seña || 0}`,
+      `Saldo: $${orden.saldo}`,
+      `Estado: ${orden.estado_orden || 'Pendiente'}`,
+      `Ingreso: ${new Date(orden.fecha).toLocaleDateString('es-AR')}`,
+    ].join('\n');
+    window.open(`https://api.whatsapp.com/send?phone=${numeroFinal}&text=${encodeURIComponent(mensaje)}`, '_blank');
+  };
+
+  const copiarTelefono = async (orden: any) => {
+    try {
+      await navigator.clipboard.writeText(String(orden.telefono || ''));
+      alert('Número copiado: ' + orden.telefono);
+    } catch {
+      alert('No se pudo copiar el número.');
+    }
   };
 
   const actualizarEstado = async (id: any, nuevoEstado: string, ordenCompleta: any) => {
@@ -210,6 +248,7 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
                 <div style={{ color: '#3b82f6', fontWeight: '700', fontSize: '0.9rem', marginTop: '4px' }}>📞 {orden.telefono}</div>
                 <div style={{ marginTop: '8px', fontSize: '0.95rem', color: theme.textMain }}>📱 <strong>{orden.equipo}</strong></div>
                 <div style={{ fontSize: '0.75rem', color: theme.textSub, marginTop: '4px' }}>INGRESÓ: {new Date(orden.fecha).toLocaleDateString('es-AR')}</div>
+                <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', marginTop: '4px' }}>🏢 Sucursal: {nombreSucursal(orden.sucursal_id)}</div>
                 
                 <button 
                   onClick={() => setExpandedId(expandedId === orden.id ? null : orden.id)}
@@ -237,6 +276,8 @@ export default function Ordenes({ ordenes, setOrdenes, stock, setStock, darkMode
                     <>
                       <button onClick={() => imprimirTicket(orden, false)} style={{ backgroundColor: darkMode ? '#334155' : '#e2e8f0', color: theme.textMain, border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', flex: 1 }}>🖨️ Ticket</button>
                       <button onClick={() => imprimirTicket(orden, true)} style={{ backgroundColor: darkMode ? '#334155' : '#e2e8f0', color: theme.textMain, border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', flex: 1 }}>📝 Copia</button>
+                      <button onClick={() => enviarOrdenWhatsapp(orden)} style={{ backgroundColor: '#25D366', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', flex: 1 }}>📲 WhatsApp</button>
+                      <button onClick={() => copiarTelefono(orden)} style={{ backgroundColor: darkMode ? '#334155' : '#e2e8f0', color: theme.textMain, border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', flex: 1 }}>📋 Copiar N°</button>
                     </>
                   )}
                   <button onClick={() => borrarOrden(orden.id)} style={{ backgroundColor: 'rgba(225, 29, 72, 0.1)', color: '#fb7185', border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', flex: 1 }}>🗑️</button>

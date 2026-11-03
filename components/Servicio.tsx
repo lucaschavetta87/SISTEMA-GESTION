@@ -4,12 +4,13 @@ import { supabase } from '../app/supabase';
 import PatternLock from './PatternLock'; 
 
 // Agregamos darkMode a las props
-export default function Servicio({ onSave, darkMode = true }: { onSave: (orden: any) => void, darkMode?: boolean }) {
+export default function Servicio({ onSave, darkMode = true, sucursales = [], sucursalId = null }: { onSave: (orden: any) => void, darkMode?: boolean, sucursales?: { id: number; nombre: string }[], sucursalId?: number | null }) {
   const [clientes, setClientes] = useState<any[]>([]);
   const [filtroCliente, setFiltroCliente] = useState('');
   const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null);
   const [esCC, setEsCC] = useState(false);
+  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<number | null>(sucursalId);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -55,6 +56,10 @@ export default function Servicio({ onSave, darkMode = true }: { onSave: (orden: 
     cargarClientes();
   }, []);
 
+  useEffect(() => {
+    setSucursalSeleccionada(sucursalId);
+  }, [sucursalId]);
+
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setReparaciones({ ...reparaciones, [e.target.name]: e.target.checked });
   };
@@ -84,7 +89,8 @@ export default function Servicio({ onSave, darkMode = true }: { onSave: (orden: 
       saldo: formData.presupuestoTotal - formData.seña,
       estado_orden: 'Pendiente',
       cliente_id: clienteSeleccionado?.id || null,
-      es_cuenta_corriente: esCC
+      es_cuenta_corriente: esCC,
+      sucursal_id: sucursalSeleccionada ?? sucursalId ?? null
     };
     onSave(nuevaOrden);
     setClienteSeleccionado(null);
@@ -187,6 +193,22 @@ export default function Servicio({ onSave, darkMode = true }: { onSave: (orden: 
             </div>
           </div>
         </div>
+
+        {/* SELECCIÓN DE SUCURSAL */}
+        {sucursales.length > 0 && (
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>SUCURSAL DONDE SE RECIBIÓ</label>
+            <select
+              value={sucursalSeleccionada ?? ''}
+              onChange={e => setSucursalSeleccionada(Number(e.target.value))}
+              style={inputStyle}
+            >
+              {sucursales.map(s => (
+                <option key={s.id} value={s.id}>{s.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <textarea name="falla" placeholder="Falla detectada..." required onChange={handleChange} rows={3} style={inputStyle}></textarea>
 

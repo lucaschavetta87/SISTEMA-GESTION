@@ -395,7 +395,7 @@ cliente_id: nueva.cliente_id || null,
 
 es_cuenta_corriente: nueva.es_cuenta_corriente || false,
 
-sucursal_id: sucursalActivaId
+sucursal_id: nueva.sucursal_id || sucursalActivaId
 
 };
 
@@ -802,9 +802,9 @@ onCambiarSucursal={(id) => setSucursalActivaId(id)}
 
 <section style={{ backgroundColor: theme.card, borderRadius: "24px", padding: "28px", boxShadow: theme.shadow, minHeight: "70vh" }}>
 
-{activeTab === "servicio" && <Servicio onSave={guardarOrden} darkMode={darkMode} />}
+{activeTab === "servicio" && <Servicio onSave={guardarOrden} darkMode={darkMode} sucursales={sucursales} sucursalId={sucursalActivaId} />}
 
-{activeTab === "ordenes" && <Ordenes ordenes={ordenes} setOrdenes={setOrdenes} stock={stock} setStock={setStock} darkMode={darkMode} />}
+{activeTab === "ordenes" && <Ordenes ordenes={ordenes} setOrdenes={setOrdenes} stock={stock} setStock={setStock} darkMode={darkMode} sucursales={sucursales} />}
 
 {activeTab === "stock" && <Stock stock={stock} setStock={setStock} darkMode={darkMode} sucursalId={sucursalActivaId} sucursales={sucursales} />}
 

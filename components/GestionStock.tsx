@@ -31,6 +31,7 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
   // AGREGAMOS 'categoria' AL ESTADO INICIAL DEL FORMULARIO
   const [form, setForm] = useState({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
   const [editando, setEditando] = useState(false);
+  const [mostrarModal, setMostrarModal] = useState(false);
   const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -137,6 +138,7 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
           ));
         }
         setEditando(false);
+        setMostrarModal(false);
         setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
         setImagenArchivo(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -157,6 +159,7 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
         }
         setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' });
         setImagenArchivo(null);
+        setMostrarModal(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
         console.error("Error al guardar:", error?.message);
@@ -205,17 +208,23 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
         </span>
       </div>
 
-      {/* FORMULARIO DE CARGA */}
-      <div style={{ 
-        border: editando ? '2px solid #ed8936' : `1px solid ${theme.border}`, 
-        padding: '25px', 
-        borderRadius: '24px', 
-        backgroundColor: theme.card,
-        boxShadow: darkMode ? '0 10px 15px -3px rgba(0, 0, 0, 0.2)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        transition: 'all 0.3s ease'
-      }}>
+      {/* MODAL FORMULARIO DE CARGA */}
+      {mostrarModal && (
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+        <div style={{ 
+          border: editando ? '2px solid #ed8936' : `1px solid ${theme.border}`, 
+          padding: '25px', 
+          borderRadius: '24px', 
+          backgroundColor: theme.card,
+          boxShadow: darkMode ? '0 10px 15px -3px rgba(0, 0, 0, 0.2)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          transition: 'all 0.3s ease',
+          width: '100%',
+          maxWidth: '720px',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}>
         <h3 style={{ color: editando ? '#ed8936' : '#3b82f6', marginBottom: '20px', fontWeight: '800' }}>
-          {editando ? '✏️ EDITANDO EN LA NUBE' : '➕ NUEVO REPUESTO / ARTÍCULO'}
+          {editando ? '✏️ EDITANDO PRODUCTO' : '➕ NUEVO REPUESTO / ARTÍCULO'}
         </h3>
         <form onSubmit={guardar} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input type="text" placeholder="Código" value={form.codigo} onChange={e => setForm({...form, codigo: e.target.value})} style={inputStyle} />
@@ -246,11 +255,26 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
             {editando ? 'ACTUALIZAR' : 'GUARDAR'}
           </button>
           {editando && (
-            <button type="button" onClick={() => {setEditando(false); setForm({id:'', codigo:'', nombre:'', cantidad:'', precio:'', imagen_url:'', categoria: 'celulares'}); setImagenArchivo(null); if (fileInputRef.current) fileInputRef.current.value = '';}} style={{ ...btnBaseStyle, backgroundColor: '#475569' }}>
+            <button type="button" onClick={() => {setEditando(false); setForm({id:'', codigo:'', nombre:'', cantidad:'', precio:'', imagen_url:'', categoria: 'celulares'}); setImagenArchivo(null); if (fileInputRef.current) fileInputRef.current.value = ''; setMostrarModal(false);}} style={{ ...btnBaseStyle, backgroundColor: '#475569' }}>
               CANCELAR
             </button>
           )}
+          <button type="button" onClick={() => { setMostrarModal(false); setEditando(false); }} style={{ ...btnBaseStyle, backgroundColor: '#64748b' }}>
+            CERRAR
+          </button>
         </form>
+      </div>
+      </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={() => { setForm({ id: '', codigo: '', nombre: '', cantidad: '', precio: '', imagen_url: '', categoria: 'celulares' }); setEditando(false); setImagenArchivo(null); if (fileInputRef.current) fileInputRef.current.value = ''; setMostrarModal(true); }}
+          style={{ ...btnBaseStyle, backgroundColor: '#3b82f6' }}
+        >
+          ➕ Nuevo producto
+        </button>
       </div>
 
       {/* BUSCADOR DE STOCK */}
@@ -322,7 +346,7 @@ export default function Stock({ stock, setStock, darkMode = true, sucursalId = n
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                     {/* FIJAMOS EL RELLENO DEL ESTADO ACÁ SIN ERRORES DE SINTAXIS */}
-                    <button onClick={() => { setForm({ ...item, precio: item.precio_venta || item.precio, imagen_url: item.imagen_url || '', categoria: item.categoria || 'celulares' }); setEditando(true); }} style={actionBtnStyle('#3b82f6')}>✏️</button>
+                    <button onClick={() => { setForm({ ...item, precio: item.precio_venta || item.precio, imagen_url: item.imagen_url || '', categoria: item.categoria || 'celulares' }); setEditando(true); setMostrarModal(true); }} style={actionBtnStyle('#3b82f6')}>✏️</button>
                     <button onClick={() => borrarItem(item.id)} style={actionBtnStyle('#ef4444')}>🗑️</button>
                   </div>
                 </td>
