@@ -115,6 +115,8 @@ alter table public.ventas add column if not exists cierre_id   bigint;
 alter table public.ventas add column if not exists tipo        text not null default 'producto';
 alter table public.ventas add column if not exists fecha_iso   timestamptz;
 
+alter table public.usuarios add column if not exists updated_at timestamptz default now();
+
 create index if not exists idx_stock_sucursal   on public.stock    (sucursal_id);
 create index if not exists idx_ordenes_sucursal on public.ordenes  (sucursal_id);
 create index if not exists idx_ventas_sucursal  on public.ventas   (sucursal_id);
@@ -155,3 +157,13 @@ select id, usuario, rol, sucursal_id, modulos from public.usuarios order by id;
 --    Se deshabilita RLS en ventas para que el Punto de Venta pueda guardar.
 -- ---------------------------------------------------------------------------
 alter table public.ventas disable row level security;
+
+-- La app usa la anon key y autenticación propia: deshabilitar RLS en las tablas
+-- usadas por el sistema para evitar bloqueos de SELECT/INSERT/UPDATE.
+alter table public.sucursales        disable row level security;
+alter table public.usuarios         disable row level security;
+alter table public.stock            disable row level security;
+alter table public.ordenes          disable row level security;
+alter table public.presupuestos     disable row level security;
+alter table public.cierres_caja     disable row level security;
+alter table public.movimientos_caja disable row level security;

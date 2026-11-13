@@ -28,6 +28,7 @@ export default function Ventas({ stock, setStock, ventas, setVentas, darkMode = 
   
   const [descuento, setDescuento] = useState(0);
   const [metodoPago, setMetodoPago] = useState('Efectivo');
+  const [montoPagado, setMontoPagado] = useState('');
 
   // Configuración de colores del tema
   const theme = {
@@ -104,6 +105,12 @@ export default function Ventas({ stock, setStock, ventas, setVentas, darkMode = 
 
   const subtotalCarrito = () => carrito.reduce((acc, item) => acc + (item.precio * item.unidades), 0);
   const totalConDescuento = () => subtotalCarrito() - descuento;
+  const vuelto = () => {
+    if (metodoPago !== 'Efectivo') return 0;
+    const pagado = Number(montoPagado) || 0;
+    const total = totalConDescuento();
+    return pagado > total ? pagado - total : 0;
+  };
 
   const imprimirTicketVenta = (datos: any) => {
     const ventanaImpresion = window.open('', '_blank');
@@ -158,6 +165,9 @@ export default function Ventas({ stock, setStock, ventas, setVentas, darkMode = 
   const finalizarVenta = async () => {
     if (carrito.length === 0) return;
     if (!cierre) return alert("⛔ Tenés que abrir la caja antes de facturar (menú Caja y Cierres).");
+    if (metodoPago === 'Efectivo' && (Number(montoPagado) || 0) < totalConDescuento()) {
+      return alert("El monto pagado es insuficiente para cubrir el total.");
+    }
     try {
       for (const item of carrito) {
         const { data: itemDb } = await supabase.from('stock').select('cantidad').eq('id', item.id).single();
@@ -201,6 +211,7 @@ export default function Ventas({ stock, setStock, ventas, setVentas, darkMode = 
       imprimirTicketVenta(nuevaVenta);
       setCarrito([]);
       setDescuento(0);
+      setMontoPagado('');
       onCambioCaja?.();
     } catch (error: any) { alert("Error al procesar la venta: " + error.message); }
   };
@@ -297,8 +308,10 @@ export default function Ventas({ stock, setStock, ventas, setVentas, darkMode = 
                 <button onClick={agregarAlCarrito} style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', padding: '0 20px', cursor: 'pointer', fontWeight: 'bold' }}>SUMAR</button>
               </div>
             </div>
+          </div>
 
-            {/* CARRITO */}
+          {/* CARRITO Y TOTALES (DERECHA) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'sticky', top: '20px' }}>
             <div style={cardStyle}>
               <h3 style={{ marginBottom: '15px', color: theme.subtext, textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: 'bold' }}>🛒 Carrito</h3>
               {carrito.length === 0 && <p style={{ color: theme.subtext, textAlign: 'center', padding: '20px' }}>Vacío.</p>}
@@ -313,7 +326,7 @@ export default function Ventas({ stock, setStock, ventas, setVentas, darkMode = 
               ))}
 
               {carrito.length > 0 && (
-                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                     <div>
                       <label style={{ fontSize: '0.7rem', color: theme.subtext, fontWeight: 'bold' }}>DESCUENTO $</label>
@@ -328,17 +341,28 @@ export default function Ventas({ stock, setStock, ventas, setVentas, darkMode = 
                       </select>
                     </div>
                   </div>
+
+                  {metodoPago === 'Efectivo' && (
+                    <div>
+                      <label style={{ fontSize: '0.7rem', color: theme.subtext, fontWeight: 'bold' }}>MONTO CON EL QUE PAGA</label>
+                      <input type="number" value={montoPagado} onChange={e => setMontoPagado(e.target.value)} style={inputStyle} placeholder="0" />
+                      <div style={{ marginTop: '8px', color: '#3b82f6', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                        Vuelto: ${vuelto().toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ textAlign: 'right', backgroundColor: theme.bg, padding: '15px', borderRadius: '15px', border: `1px solid ${theme.border}` }}>
-                    <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#10b981' }}>TOTAL: ${totalConDescuento().toLocaleString()}</div>
+                    <div style={{ fontSize: '0.9rem', color: theme.subtext }}>Subtotal: ${subtotalCarrito().toLocaleString()}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#f87171' }}>Descuento: -${Number(descuento || 0).toLocaleString()}</div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#10b981', marginTop: '6px' }}>TOTAL: ${totalConDescuento().toLocaleString()}</div>
                   </div>
                   <button onClick={finalizarVenta} style={{ width: '100%', backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '18px', borderRadius: '15px', fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer', transition: '0.3s' }}>✅ FINALIZAR</button>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* ÚLTIMO TICKET */}
-          <div style={{ position: 'sticky', top: '20px' }}>
+            {/* ÚLTIMO TICKET */}
             {ticketFinal ? (
               <div style={cardStyle}>
                  <h4 style={{ color: theme.text, marginBottom: '10px', fontWeight: 'bold' }}>Última Venta</h4>
@@ -349,7 +373,7 @@ export default function Ventas({ stock, setStock, ventas, setVentas, darkMode = 
                  <button onClick={() => imprimirTicketVenta(ticketFinal)} style={{ width: '100%', padding: '12px', backgroundColor: darkMode ? '#334155' : '#e2e8f0', color: theme.text, borderRadius: '10px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>🖨️ RE-IMPRIMIR</button>
               </div>
             ) : (
-              <div style={{ ...cardStyle, textAlign: 'center', color: theme.subtext, border: `2px dashed ${theme.border}`, padding: '60px' }}>ESPERANDO VENTA</div>
+              <div style={{ ...cardStyle, textAlign: 'center', color: theme.subtext, border: `2px dashed ${theme.border}`, padding: '40px' }}>ESPERANDO VENTA</div>
             )}
           </div>
         </div>

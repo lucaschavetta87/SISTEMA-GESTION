@@ -6,9 +6,11 @@ import {
   abrirCaja,
   calcularTotales,
   cerrarCaja,
+  historialCierres,
   listarMovimientos,
   registrarMovimiento,
   type Cierre,
+  type CierreHistorial,
   type Movimiento,
   type Totales,
 } from '../app/lib/caja';
@@ -35,6 +37,8 @@ export default function Caja({ sesion, cierre, onCambio, onIrAVentas, darkMode =
   const [verCobro, setVerCobro] = useState(false);
   const [ordenes, setOrdenes] = useState<any[]>([]);
   const [ultimoCierre, setUltimoCierre] = useState<Cierre | null>(null);
+  const [verHistorialCierres, setVerHistorialCierres] = useState(false);
+  const [historial, setHistorial] = useState<CierreHistorial[]>([]);
 
   const theme = {
     card: darkMode ? '#1e293b' : '#ffffff',
@@ -237,6 +241,18 @@ export default function Caja({ sesion, cierre, onCambio, onIrAVentas, darkMode =
           <button onClick={() => setCerrando(!cerrando)} style={btn(cerrando ? '#475569' : '#ef4444')}>
             {cerrando ? '✖ Volver' : '🔒 Cerrar caja'}
           </button>
+          <button
+            onClick={async () => {
+              if (!verHistorialCierres) {
+                const data = await historialCierres({ sucursalId: sesion.sucursal.id, usuarioId: null, desde: null, hasta: null });
+                setHistorial(data);
+              }
+              setVerHistorialCierres(!verHistorialCierres);
+            }}
+            style={btn('#3b82f6')}
+          >
+            {verHistorialCierres ? 'Ocultar historial' : '📜 Historial'}
+          </button>
         </div>
 
         {verCobro && (
@@ -308,6 +324,28 @@ export default function Caja({ sesion, cierre, onCambio, onIrAVentas, darkMode =
             ))}
           </div>
         </div>
+
+        {verHistorialCierres && (
+          <div style={cardStyle}>
+            <h3 style={{ color: theme.text, marginTop: 0 }}>Historial de cierres</h3>
+            {historial.length === 0 && <p style={{ color: theme.subtext }}>No hay cierres registrados.</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {historial.map((h) => (
+                <div key={h.id} style={{ padding: '12px', backgroundColor: theme.bg, borderRadius: '12px', border: `1px solid ${theme.border}` }}>
+                  <div style={{ color: theme.text, fontWeight: 'bold' }}>
+                    Turno: {h.turno || '—'} · {new Date(h.fecha_apertura).toLocaleString('es-AR')}
+                  </div>
+                  <div style={{ color: theme.subtext, fontSize: '0.8rem', marginTop: '4px' }}>
+                    Total: ${Number(h.total_ventas).toLocaleString('es-AR')} · Efectivo: ${Number(h.total_efectivo).toLocaleString('es-AR')} · Transf: ${Number(h.total_transferencia).toLocaleString('es-AR')} · Tarjeta: ${Number(h.total_tarjeta).toLocaleString('es-AR')}
+                  </div>
+                  <div style={{ color: theme.subtext, fontSize: '0.8rem', marginTop: '4px' }}>
+                    Contado: ${Number(h.monto_contado ?? 0).toLocaleString('es-AR')} · Diferencia: ${Number(h.diferencia ?? 0).toLocaleString('es-AR')} · Estado: {h.estado}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -330,6 +368,44 @@ export default function Caja({ sesion, cierre, onCambio, onIrAVentas, darkMode =
                 ${Number(ultimoCierre.diferencia).toLocaleString('es-AR')}
               </strong>
             </span>
+          </div>
+        </div>
+      )}
+
+      <div style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <span style={{ color: theme.text, fontWeight: 800 }}>📜 Historial de cierres anteriores</span>
+        <button
+          type="button"
+          onClick={async () => {
+            if (!verHistorialCierres) {
+              const data = await historialCierres({ sucursalId: sesion.sucursal.id, usuarioId: null, desde: null, hasta: null });
+              setHistorial(data);
+            }
+            setVerHistorialCierres(!verHistorialCierres);
+          }}
+          style={btn('#3b82f6')}
+        >
+          {verHistorialCierres ? 'Ocultar' : 'Ver historial'}
+        </button>
+      </div>
+
+      {verHistorialCierres && (
+        <div style={cardStyle}>
+          {historial.length === 0 && <p style={{ color: theme.subtext }}>No hay cierres registrados.</p>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {historial.map((h) => (
+              <div key={h.id} style={{ padding: '12px', backgroundColor: theme.bg, borderRadius: '12px', border: `1px solid ${theme.border}` }}>
+                <div style={{ color: theme.text, fontWeight: 'bold' }}>
+                  Turno: {h.turno || '—'} · {new Date(h.fecha_apertura).toLocaleString('es-AR')}
+                </div>
+                <div style={{ color: theme.subtext, fontSize: '0.8rem', marginTop: '4px' }}>
+                  Total: ${Number(h.total_ventas).toLocaleString('es-AR')} · Efectivo: ${Number(h.total_efectivo).toLocaleString('es-AR')} · Transf: ${Number(h.total_transferencia).toLocaleString('es-AR')} · Tarjeta: ${Number(h.total_tarjeta).toLocaleString('es-AR')}
+                </div>
+                <div style={{ color: theme.subtext, fontSize: '0.8rem', marginTop: '4px' }}>
+                  Contado: ${Number(h.monto_contado ?? 0).toLocaleString('es-AR')} · Diferencia: ${Number(h.diferencia ?? 0).toLocaleString('es-AR')} · Estado: {h.estado}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
